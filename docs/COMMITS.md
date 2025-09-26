@@ -11,3 +11,7 @@ This file outlines the commit structure for this project to keep it structured a
 - BUG: Commit when you are fixing a bug can be large or small (don't confused with NIT)
 - NIT: This is a nit commit where you're changing one or two lines of code very small but is not a bug
 - MODULE [DEP, INT, MIG, SCR CMD] These are when you are changing a specific part of the code 
+
+## Commit MSG
+
+This should be a short sentance explaining what you did
