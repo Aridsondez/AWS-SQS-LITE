@@ -1,0 +1,1407 @@
+Flattened view of: /Users/aridsondez/Desktop/AWS-SQS-LITE
+================================================================================
+
+
+📁 Directory: .
+--------------------------------------------------------------------------------
+
+--- FILE: ./go.mod ---
+module github.com/aridsondez/AWS-SQS-LITE
+
+
+go 1.20 
+--- END OF FILE ---
+
+[Skipped: test — too large]
+
+--- FILE: ./README.md ---
+# AWS-SQS-LITE
+
+*A distributed Queue Service in GO (AWS SQS inspired)*
+
+## Overview 
+SQS-lite is a simplified version of AWS SQS built for learning distributed systems, concurancy, and containerized development
+
+The system provides:
+
+At-least-once delivery (workers may see duplicates → must be idempotent).
+
+Visibility timeouts & leases (messages “locked” while in flight).
+
+Retries with exponential backoff + jitter.
+
+Dead Letter Queues (DLQs) (messages that fail too often are quarantined).
+
+API/CLI for producers & workers.
+
+Basic monitoring/metrics with Prometheus.
+
+This is not meant to replace SQS — it’s a learning project to deeply understand the design trade-offs in message queuing systems.
+
+## Why This Project?
+
+Building SQS-Lite gives hands-on practice with concepts that are common in distributed infrastructure:
+
+Go concurrency: goroutines, channels, contexts for producer/consumer patterns.
+
+Database-backed queues: using Postgres with FOR UPDATE SKIP LOCKED for safe multi-consumer message claims.
+
+Delivery guarantees: understanding at-least-once vs exactly-once semantics.
+
+Backoff strategies: exponential backoff with jitter to avoid thundering herds.
+
+Observability: Prometheus counters/histograms, structured logs.
+
+Containerization: Docker/Docker Compose to run API, workers, and DB together.
+
+Recruiters love this kind of project because it shows you can design, implement, and explain infra-level software — the same skills used at companies like AWS, HashiCorp, and Cloudflare.
+
+## Tech Stack
+
+Language: Go (fast, simple concurrency, industry standard for infra).
+
+Storage: PostgreSQL (durability + transactional locks).
+
+API: REST (JSON). gRPC may be added later.
+
+Observability: Prometheus for metrics, structured logging with zerolog.
+
+Containers: Docker + docker-compose (API, DB, Prometheus).
+
+CLI: Cobra in Go, wrapping API calls for enqueue/receive/ack.
+
+## Architecture
+
+Core components:
+
+API Server: Enqueue, receive, ack, change-visibility, stats.
+
+Queue Manager: Implements leases, retries, DLQs.
+
+Storage Layer: Postgres transactions for concurrency control.
+
+Sweeper: Background task to detect expired leases and requeue or DLQ messages.
+
+Worker SDK & CLI: Client libraries for producers/consumers.
+
+Metrics: Prometheus endpoint for observability.
+
+Message lifecycle:
+
+Enqueue → message stored in Postgres with not_before timestamp.
+
+Receive → worker claims messages via FOR UPDATE SKIP LOCKED, sets lease_until.
+
+Ack → worker signals completion → message deleted.
+
+Visibility timeout expires → message becomes available again.
+
+Retries exceed limit → message moved to Dead Letter Queue.
+
+## Projected File Structure
+sqs-lite/
+├── cmd/
+│   ├── api/        # API server entrypoint
+│   ├── worker/     # Example worker process
+│   └── cli/        # CLI using Cobra
+├── internal/
+│   ├── api/        # HTTP handlers & routes
+│   ├── config/     # Env config loader
+│   ├── metrics/    # Prometheus metrics registration
+│   └── queue/      # Core queue logic
+│       ├── store/  # Postgres-backed store
+│       ├── models.go
+│       └── service.go
+├── migrations/     # SQL migrations for Postgres schema
+├── deploy/
+│   └── prometheus/ # Prometheus config
+├── scripts/        # Dev helpers, notes
+├── Dockerfile
+├── docker-compose.yml
+├── README.md
+└── go.mod
+
+## Development Plan (6 Weeks)
+
+Week 1 → Repo setup, schema design, in-memory queue prototype.
+
+Week 2 → Postgres integration, basic enqueue/receive/ack.
+
+Week 3 → Change-visibility, sweeper, retries.
+
+Week 4 → Dead Letter Queues + Prometheus metrics.
+
+Week 5 → CLI tooling, worker SDK, docs.
+
+Week 6 → Load testing, polish, LinkedIn demo post.
+
+## Learning Outcomes
+
+By the end of this project you’ll be comfortable with:
+
+Writing concurrent Go code with goroutines/channels.
+
+Designing APIs for infra tools.
+
+Using Postgres for concurrency control (FOR UPDATE SKIP LOCKED).
+
+Implementing exponential backoff & retry policies.
+
+Deploying multi-service systems with Docker Compose.
+
+Explaining distributed system trade-offs to recruiters.
+--- END OF FILE ---
+
+
+--- FILE: ./flattened_output.txt ---
+
+--- END OF FILE ---
+
+
+--- FILE: ./docker-compose.yml ---
+
+--- END OF FILE ---
+
+
+📁 Directory: cmd
+--------------------------------------------------------------------------------
+
+📁 Directory: cmd/cli
+--------------------------------------------------------------------------------
+
+📁 Directory: cmd/api
+--------------------------------------------------------------------------------
+[Skipped: test — too large]
+
+--- FILE: ./cmd/api/test.go ---
+package main
+
+import (
+	"fmt"
+	"time"
+	"math"
+)
+// i defined it as a var and not a actual type 
+func main(){
+	timeNow := time.Now()
+	test := [4]int{1,2,3,4}
+
+	for i := 0 ; i <len(test); i++{
+		test[i] = int(math.Pow(float64(test[i]),2))
+	}
+
+	fmt.Println(test)
+	time.Sleep(2*time.Second)
+	fmt.Println(time.Since(timeNow))
+
+}
+--- END OF FILE ---
+
+
+📁 Directory: cmd/worker
+--------------------------------------------------------------------------------
+
+📁 Directory: migrations
+--------------------------------------------------------------------------------
+
+📁 Directory: deploy
+--------------------------------------------------------------------------------
+
+📁 Directory: deploy/prometheus
+--------------------------------------------------------------------------------
+
+📁 Directory: internal
+--------------------------------------------------------------------------------
+
+📁 Directory: internal/metrics
+--------------------------------------------------------------------------------
+
+📁 Directory: internal/config
+--------------------------------------------------------------------------------
+
+📁 Directory: internal/queue
+--------------------------------------------------------------------------------
+
+--- FILE: ./internal/queue/models.go ---
+
+--- END OF FILE ---
+
+
+--- FILE: ./internal/queue/services.go ---
+
+--- END OF FILE ---
+
+
+📁 Directory: internal/queue/store
+--------------------------------------------------------------------------------
+
+📁 Directory: internal/api
+--------------------------------------------------------------------------------
+
+📁 Directory: docs
+--------------------------------------------------------------------------------
+
+--- FILE: ./docs/COMMITS.md ---
+# Commit Structure
+
+This file outlines the commit structure for this project to keep it structured and production like. There are different types of commits that represent the change that you made but all commits follow the same structure 
+
+## Stucture 
+`[TYPE-NUMBER]: *Commit Message* `
+
+## Types 
+
+- DOC: Commit when you are updating documentation (eg. README.md or any file similar)
+- BUG: Commit when you are fixing a bug can be large or small (don't confused with NIT)
+- NIT: This is a nit commit where you're changing one or two lines of code very small but is not a bug
+- MODULE [DEP, INT, MIG, SCR CMD] These are when you are changing a specific part of the code 
+
+## Commit MSG
+
+This should be a short sentance explaining what you did
+--- END OF FILE ---
+
+
+📁 Directory: scripts
+--------------------------------------------------------------------------------
+
+📁 Directory: .git
+--------------------------------------------------------------------------------
+
+--- FILE: ./.git/config ---
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+	ignorecase = true
+	precomposeunicode = true
+[remote "origin"]
+	url = git@github.com:Aridsondez/AWS-SQS-LITE.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main
+
+--- END OF FILE ---
+
+
+--- FILE: ./.git/HEAD ---
+ref: refs/heads/main
+
+--- END OF FILE ---
+
+
+--- FILE: ./.git/description ---
+Unnamed repository; edit this file 'description' to name the repository.
+
+--- END OF FILE ---
+
+[Error reading ./.git/index: 'utf-8' codec can't decode byte 0xab in position 13: invalid start byte]
+
+--- FILE: ./.git/COMMIT_EDITMSG ---
+initial Commit
+
+--- END OF FILE ---
+
+
+📁 Directory: .git/objects
+--------------------------------------------------------------------------------
+
+📁 Directory: .git/objects/0e
+--------------------------------------------------------------------------------
+[Error reading ./.git/objects/0e/1d16bd7984c5e002f428afa6605e5b9c55975f: 'utf-8' codec can't decode byte 0xb6 in position 8: invalid start byte]
+
+📁 Directory: .git/objects/33
+--------------------------------------------------------------------------------
+[Error reading ./.git/objects/33/6933528b7b99fde731faf4d54dbb3f3baf0c44: 'utf-8' codec can't decode byte 0x85 in position 14: invalid start byte]
+
+📁 Directory: .git/objects/bd
+--------------------------------------------------------------------------------
+[Error reading ./.git/objects/bd/ca74e4a3fa69b5348c2f841e972b59f81841a2: 'utf-8' codec can't decode byte 0xb4 in position 8: invalid start byte]
+
+📁 Directory: .git/objects/e2
+--------------------------------------------------------------------------------
+[Error reading ./.git/objects/e2/526d7e84d9feb9a4aae6e157e3cdece03d3001: 'utf-8' codec can't decode byte 0xf1 in position 21: invalid continuation byte]
+
+📁 Directory: .git/objects/e3
+--------------------------------------------------------------------------------
+[Error reading ./.git/objects/e3/62a2d3491821757a6b9da0360ff7af4484702d: 'utf-8' codec can't decode byte 0x85 in position 2: invalid start byte]
+[Error reading ./.git/objects/e3/5d7c0f022c38764f2c28eaef6c10ac92aafd5d: 'utf-8' codec can't decode byte 0xa5 in position 2: invalid start byte]
+
+📁 Directory: .git/objects/4b
+--------------------------------------------------------------------------------
+[Error reading ./.git/objects/4b/20c78ef6767b39bbab3fa7a2b7e1bd6901c93a: 'utf-8' codec can't decode byte 0xc8 in position 17: invalid continuation byte]
+
+📁 Directory: .git/objects/pack
+--------------------------------------------------------------------------------
+
+📁 Directory: .git/objects/7b
+--------------------------------------------------------------------------------
+[Error reading ./.git/objects/7b/9fefff2ed9c30c7781afd49f97918348494889: 'utf-8' codec can't decode byte 0xf1 in position 22: invalid continuation byte]
+
+📁 Directory: .git/objects/8a
+--------------------------------------------------------------------------------
+[Error reading ./.git/objects/8a/2982c094daa6c2db845f0a46803df512eb0584: 'utf-8' codec can't decode byte 0xd1 in position 5: invalid continuation byte]
+
+📁 Directory: .git/objects/7e
+--------------------------------------------------------------------------------
+[Error reading ./.git/objects/7e/7f313cd16791e2d9031e4f24a0629e76187f32: 'utf-8' codec can't decode byte 0xa5 in position 2: invalid start byte]
+
+📁 Directory: .git/objects/81
+--------------------------------------------------------------------------------
+[Error reading ./.git/objects/81/6a61ea358fe96c6c471805f08e975c4f294a33: 'utf-8' codec can't decode byte 0xb4 in position 8: invalid start byte]
+
+📁 Directory: .git/objects/6b
+--------------------------------------------------------------------------------
+[Error reading ./.git/objects/6b/690f1c8ab212400671bb2357608d35066e5b9b: 'utf-8' codec can't decode byte 0x85 in position 2: invalid start byte]
+
+📁 Directory: .git/objects/6e
+--------------------------------------------------------------------------------
+[Error reading ./.git/objects/6e/36544ab27256c22fd485bb457216259dbb9380: 'utf-8' codec can't decode byte 0xa5 in position 2: invalid start byte]
+
+📁 Directory: .git/objects/36
+--------------------------------------------------------------------------------
+[Error reading ./.git/objects/36/2dfbb1d952cfbfe0cd399ddf8fe56c9a09ee69: 'utf-8' codec can't decode byte 0xd1 in position 4: invalid continuation byte]
+
+📁 Directory: .git/objects/info
+--------------------------------------------------------------------------------
+
+📁 Directory: .git/objects/a0
+--------------------------------------------------------------------------------
+[Error reading ./.git/objects/a0/a51d4e194968c25ac105f9447786192a8cf431: 'utf-8' codec can't decode byte 0xf1 in position 22: invalid continuation byte]
+
+📁 Directory: .git/objects/b8
+--------------------------------------------------------------------------------
+[Error reading ./.git/objects/b8/2aecbdeeba2c57192bd8095a63cb46eaf4b635: 'utf-8' codec can't decode byte 0xa5 in position 2: invalid start byte]
+
+📁 Directory: .git/objects/ea
+--------------------------------------------------------------------------------
+[Error reading ./.git/objects/ea/ebf7ed57ee367def570f6a530e45b60663e67d: 'utf-8' codec can't decode byte 0xca in position 3: invalid continuation byte]
+
+📁 Directory: .git/objects/e6
+--------------------------------------------------------------------------------
+[Skipped: 6b5d75f1e247471732cbf79549cad26ccbc6c7 — too large]
+[Error reading ./.git/objects/e6/9de29bb2d1d6434b8b29ae775ad8c2e48c5391: 'utf-8' codec can't decode byte 0xca in position 3: invalid continuation byte]
+
+📁 Directory: .git/objects/70
+--------------------------------------------------------------------------------
+[Error reading ./.git/objects/70/e18ab1e2b1e4e2e1cdba57aa9c87c5a16896a9: 'utf-8' codec can't decode byte 0xcf in position 4: invalid continuation byte]
+
+📁 Directory: .git/objects/8d
+--------------------------------------------------------------------------------
+[Error reading ./.git/objects/8d/1cc6b8288751130e3ce934a472bb77b5b124d4: 'utf-8' codec can't decode byte 0x85 in position 14: invalid start byte]
+
+📁 Directory: .git/objects/22
+--------------------------------------------------------------------------------
+[Error reading ./.git/objects/22/632a6dc857ac602e418e7129d360b5e3d74a69: 'utf-8' codec can't decode byte 0xd1 in position 21: invalid continuation byte]
+
+📁 Directory: .git/info
+--------------------------------------------------------------------------------
+
+--- FILE: ./.git/info/exclude ---
+# git ls-files --others --exclude-from=.git/info/exclude
+# Lines that start with '#' are comments.
+# For a project mostly in C, the following would be a good set of
+# exclude patterns (uncomment them if you want to use them):
+# *.[oa]
+# *~
+
+--- END OF FILE ---
+
+
+📁 Directory: .git/logs
+--------------------------------------------------------------------------------
+
+--- FILE: ./.git/logs/HEAD ---
+0000000000000000000000000000000000000000 e35d7c0f022c38764f2c28eaef6c10ac92aafd5d Aridsondez <schoolaridsondez@gmail.com> 1756048731 -0400	commit (initial): docs: [SQS-01] creating readme and outlining project
+e35d7c0f022c38764f2c28eaef6c10ac92aafd5d b82aecbdeeba2c57192bd8095a63cb46eaf4b635 Aridsondez <schoolaridsondez@gmail.com> 1756138197 -0400	commit: [DOC-01] created file structure
+b82aecbdeeba2c57192bd8095a63cb46eaf4b635 7e7f313cd16791e2d9031e4f24a0629e76187f32 Aridsondez <schoolaridsondez@gmail.com> 1756138718 -0400	commit: [DOC-02]: Created Commit Type
+7e7f313cd16791e2d9031e4f24a0629e76187f32 6e36544ab27256c22fd485bb457216259dbb9380 Aridsondez <schoolaridsondez@gmail.com> 1758892714 -0400	commit: initial Commit
+
+--- END OF FILE ---
+
+
+📁 Directory: .git/logs/refs
+--------------------------------------------------------------------------------
+
+📁 Directory: .git/logs/refs/heads
+--------------------------------------------------------------------------------
+
+--- FILE: ./.git/logs/refs/heads/main ---
+0000000000000000000000000000000000000000 e35d7c0f022c38764f2c28eaef6c10ac92aafd5d Aridsondez <schoolaridsondez@gmail.com> 1756048731 -0400	commit (initial): docs: [SQS-01] creating readme and outlining project
+e35d7c0f022c38764f2c28eaef6c10ac92aafd5d b82aecbdeeba2c57192bd8095a63cb46eaf4b635 Aridsondez <schoolaridsondez@gmail.com> 1756138197 -0400	commit: [DOC-01] created file structure
+b82aecbdeeba2c57192bd8095a63cb46eaf4b635 7e7f313cd16791e2d9031e4f24a0629e76187f32 Aridsondez <schoolaridsondez@gmail.com> 1756138718 -0400	commit: [DOC-02]: Created Commit Type
+7e7f313cd16791e2d9031e4f24a0629e76187f32 6e36544ab27256c22fd485bb457216259dbb9380 Aridsondez <schoolaridsondez@gmail.com> 1758892714 -0400	commit: initial Commit
+
+--- END OF FILE ---
+
+
+📁 Directory: .git/logs/refs/remotes
+--------------------------------------------------------------------------------
+
+📁 Directory: .git/logs/refs/remotes/origin
+--------------------------------------------------------------------------------
+
+--- FILE: ./.git/logs/refs/remotes/origin/main ---
+0000000000000000000000000000000000000000 6e36544ab27256c22fd485bb457216259dbb9380 Aridsondez <schoolaridsondez@gmail.com> 1758892719 -0400	update by push
+
+--- END OF FILE ---
+
+
+📁 Directory: .git/hooks
+--------------------------------------------------------------------------------
+
+--- FILE: ./.git/hooks/commit-msg.sample ---
+#!/bin/sh
+#
+# An example hook script to check the commit log message.
+# Called by "git commit" with one argument, the name of the file
+# that has the commit message.  The hook should exit with non-zero
+# status after issuing an appropriate message if it wants to stop the
+# commit.  The hook is allowed to edit the commit message file.
+#
+# To enable this hook, rename this file to "commit-msg".
+
+# Uncomment the below to add a Signed-off-by line to the message.
+# Doing this in a hook is a bad idea in general, but the prepare-commit-msg
+# hook is more suited to it.
+#
+# SOB=$(git var GIT_AUTHOR_IDENT | sed -n 's/^\(.*>\).*$/Signed-off-by: \1/p')
+# grep -qs "^$SOB" "$1" || echo "$SOB" >> "$1"
+
+# This example catches duplicate Signed-off-by lines.
+
+test "" = "$(grep '^Signed-off-by: ' "$1" |
+	 sort | uniq -c | sed -e '/^[ 	]*1[ 	]/d')" || {
+	echo >&2 Duplicate Signed-off-by lines.
+	exit 1
+}
+
+--- END OF FILE ---
+
+
+--- FILE: ./.git/hooks/pre-rebase.sample ---
+#!/bin/sh
+#
+# Copyright (c) 2006, 2008 Junio C Hamano
+#
+# The "pre-rebase" hook is run just before "git rebase" starts doing
+# its job, and can prevent the command from running by exiting with
+# non-zero status.
+#
+# The hook is called with the following parameters:
+#
+# $1 -- the upstream the series was forked from.
+# $2 -- the branch being rebased (or empty when rebasing the current branch).
+#
+# This sample shows how to prevent topic branches that are already
+# merged to 'next' branch from getting rebased, because allowing it
+# would result in rebasing already published history.
+
+publish=next
+basebranch="$1"
+if test "$#" = 2
+then
+	topic="refs/heads/$2"
+else
+	topic=`git symbolic-ref HEAD` ||
+	exit 0 ;# we do not interrupt rebasing detached HEAD
+fi
+
+case "$topic" in
+refs/heads/??/*)
+	;;
+*)
+	exit 0 ;# we do not interrupt others.
+	;;
+esac
+
+# Now we are dealing with a topic branch being rebased
+# on top of master.  Is it OK to rebase it?
+
+# Does the topic really exist?
+git show-ref -q "$topic" || {
+	echo >&2 "No such branch $topic"
+	exit 1
+}
+
+# Is topic fully merged to master?
+not_in_master=`git rev-list --pretty=oneline ^master "$topic"`
+if test -z "$not_in_master"
+then
+	echo >&2 "$topic is fully merged to master; better remove it."
+	exit 1 ;# we could allow it, but there is no point.
+fi
+
+# Is topic ever merged to next?  If so you should not be rebasing it.
+only_next_1=`git rev-list ^master "^$topic" ${publish} | sort`
+only_next_2=`git rev-list ^master           ${publish} | sort`
+if test "$only_next_1" = "$only_next_2"
+then
+	not_in_topic=`git rev-list "^$topic" master`
+	if test -z "$not_in_topic"
+	then
+		echo >&2 "$topic is already up to date with master"
+		exit 1 ;# we could allow it, but there is no point.
+	else
+		exit 0
+	fi
+else
+	not_in_next=`git rev-list --pretty=oneline ^${publish} "$topic"`
+	/usr/bin/perl -e '
+		my $topic = $ARGV[0];
+		my $msg = "* $topic has commits already merged to public branch:\n";
+		my (%not_in_next) = map {
+			/^([0-9a-f]+) /;
+			($1 => 1);
+		} split(/\n/, $ARGV[1]);
+		for my $elem (map {
+				/^([0-9a-f]+) (.*)$/;
+				[$1 => $2];
+			} split(/\n/, $ARGV[2])) {
+			if (!exists $not_in_next{$elem->[0]}) {
+				if ($msg) {
+					print STDERR $msg;
+					undef $msg;
+				}
+				print STDERR " $elem->[1]\n";
+			}
+		}
+	' "$topic" "$not_in_next" "$not_in_master"
+	exit 1
+fi
+
+<<\DOC_END
+
+This sample hook safeguards topic branches that have been
+published from being rewound.
+
+The workflow assumed here is:
+
+ * Once a topic branch forks from "master", "master" is never
+   merged into it again (either directly or indirectly).
+
+ * Once a topic branch is fully cooked and merged into "master",
+   it is deleted.  If you need to build on top of it to correct
+   earlier mistakes, a new topic branch is created by forking at
+   the tip of the "master".  This is not strictly necessary, but
+   it makes it easier to keep your history simple.
+
+ * Whenever you need to test or publish your changes to topic
+   branches, merge them into "next" branch.
+
+The script, being an example, hardcodes the publish branch name
+to be "next", but it is trivial to make it configurable via
+$GIT_DIR/config mechanism.
+
+With this workflow, you would want to know:
+
+(1) ... if a topic branch has ever been merged to "next".  Young
+    topic branches can have stupid mistakes you would rather
+    clean up before publishing, and things that have not been
+    merged into other branches can be easily rebased without
+    affecting other people.  But once it is published, you would
+    not want to rewind it.
+
+(2) ... if a topic branch has been fully merged to "master".
+    Then you can delete it.  More importantly, you should not
+    build on top of it -- other people may already want to
+    change things related to the topic as patches against your
+    "master", so if you need further changes, it is better to
+    fork the topic (perhaps with the same name) afresh from the
+    tip of "master".
+
+Let's look at this example:
+
+		   o---o---o---o---o---o---o---o---o---o "next"
+		  /       /           /           /
+		 /   a---a---b A     /           /
+		/   /               /           /
+	       /   /   c---c---c---c B         /
+	      /   /   /             \         /
+	     /   /   /   b---b C     \       /
+	    /   /   /   /             \     /
+    ---o---o---o---o---o---o---o---o---o---o---o "master"
+
+
+A, B and C are topic branches.
+
+ * A has one fix since it was merged up to "next".
+
+ * B has finished.  It has been fully merged up to "master" and "next",
+   and is ready to be deleted.
+
+ * C has not merged to "next" at all.
+
+We would want to allow C to be rebased, refuse A, and encourage
+B to be deleted.
+
+To compute (1):
+
+	git rev-list ^master ^topic next
+	git rev-list ^master        next
+
+	if these match, topic has not merged in next at all.
+
+To compute (2):
+
+	git rev-list master..topic
+
+	if this is empty, it is fully merged to "master".
+
+DOC_END
+
+--- END OF FILE ---
+
+
+--- FILE: ./.git/hooks/pre-commit.sample ---
+#!/bin/sh
+#
+# An example hook script to verify what is about to be committed.
+# Called by "git commit" with no arguments.  The hook should
+# exit with non-zero status after issuing an appropriate message if
+# it wants to stop the commit.
+#
+# To enable this hook, rename this file to "pre-commit".
+
+if git rev-parse --verify HEAD >/dev/null 2>&1
+then
+	against=HEAD
+else
+	# Initial commit: diff against an empty tree object
+	against=$(git hash-object -t tree /dev/null)
+fi
+
+# If you want to allow non-ASCII filenames set this variable to true.
+allownonascii=$(git config --type=bool hooks.allownonascii)
+
+# Redirect output to stderr.
+exec 1>&2
+
+# Cross platform projects tend to avoid non-ASCII filenames; prevent
+# them from being added to the repository. We exploit the fact that the
+# printable range starts at the space character and ends with tilde.
+if [ "$allownonascii" != "true" ] &&
+	# Note that the use of brackets around a tr range is ok here, (it's
+	# even required, for portability to Solaris 10's /usr/bin/tr), since
+	# the square bracket bytes happen to fall in the designated range.
+	test $(git diff --cached --name-only --diff-filter=A -z $against |
+	  LC_ALL=C tr -d '[ -~]\0' | wc -c) != 0
+then
+	cat <<\EOF
+Error: Attempt to add a non-ASCII file name.
+
+This can cause problems if you want to work with people on other platforms.
+
+To be portable it is advisable to rename the file.
+
+If you know what you are doing you can disable this check using:
+
+  git config hooks.allownonascii true
+EOF
+	exit 1
+fi
+
+# If there are whitespace errors, print the offending file names and fail.
+exec git diff-index --check --cached $against --
+
+--- END OF FILE ---
+
+
+--- FILE: ./.git/hooks/applypatch-msg.sample ---
+#!/bin/sh
+#
+# An example hook script to check the commit log message taken by
+# applypatch from an e-mail message.
+#
+# The hook should exit with non-zero status after issuing an
+# appropriate message if it wants to stop the commit.  The hook is
+# allowed to edit the commit message file.
+#
+# To enable this hook, rename this file to "applypatch-msg".
+
+. git-sh-setup
+commitmsg="$(git rev-parse --git-path hooks/commit-msg)"
+test -x "$commitmsg" && exec "$commitmsg" ${1+"$@"}
+:
+
+--- END OF FILE ---
+
+
+--- FILE: ./.git/hooks/fsmonitor-watchman.sample ---
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use IPC::Open2;
+
+# An example hook script to integrate Watchman
+# (https://facebook.github.io/watchman/) with git to speed up detecting
+# new and modified files.
+#
+# The hook is passed a version (currently 2) and last update token
+# formatted as a string and outputs to stdout a new update token and
+# all files that have been modified since the update token. Paths must
+# be relative to the root of the working tree and separated by a single NUL.
+#
+# To enable this hook, rename this file to "query-watchman" and set
+# 'git config core.fsmonitor .git/hooks/query-watchman'
+#
+my ($version, $last_update_token) = @ARGV;
+
+# Uncomment for debugging
+# print STDERR "$0 $version $last_update_token\n";
+
+# Check the hook interface version
+if ($version ne 2) {
+	die "Unsupported query-fsmonitor hook version '$version'.\n" .
+	    "Falling back to scanning...\n";
+}
+
+my $git_work_tree = get_working_dir();
+
+my $retry = 1;
+
+my $json_pkg;
+eval {
+	require JSON::XS;
+	$json_pkg = "JSON::XS";
+	1;
+} or do {
+	require JSON::PP;
+	$json_pkg = "JSON::PP";
+};
+
+launch_watchman();
+
+sub launch_watchman {
+	my $o = watchman_query();
+	if (is_work_tree_watched($o)) {
+		output_result($o->{clock}, @{$o->{files}});
+	}
+}
+
+sub output_result {
+	my ($clockid, @files) = @_;
+
+	# Uncomment for debugging watchman output
+	# open (my $fh, ">", ".git/watchman-output.out");
+	# binmode $fh, ":utf8";
+	# print $fh "$clockid\n@files\n";
+	# close $fh;
+
+	binmode STDOUT, ":utf8";
+	print $clockid;
+	print "\0";
+	local $, = "\0";
+	print @files;
+}
+
+sub watchman_clock {
+	my $response = qx/watchman clock "$git_work_tree"/;
+	die "Failed to get clock id on '$git_work_tree'.\n" .
+		"Falling back to scanning...\n" if $? != 0;
+
+	return $json_pkg->new->utf8->decode($response);
+}
+
+sub watchman_query {
+	my $pid = open2(\*CHLD_OUT, \*CHLD_IN, 'watchman -j --no-pretty')
+	or die "open2() failed: $!\n" .
+	"Falling back to scanning...\n";
+
+	# In the query expression below we're asking for names of files that
+	# changed since $last_update_token but not from the .git folder.
+	#
+	# To accomplish this, we're using the "since" generator to use the
+	# recency index to select candidate nodes and "fields" to limit the
+	# output to file names only. Then we're using the "expression" term to
+	# further constrain the results.
+	my $last_update_line = "";
+	if (substr($last_update_token, 0, 1) eq "c") {
+		$last_update_token = "\"$last_update_token\"";
+		$last_update_line = qq[\n"since": $last_update_token,];
+	}
+	my $query = <<"	END";
+		["query", "$git_work_tree", {$last_update_line
+			"fields": ["name"],
+			"expression": ["not", ["dirname", ".git"]]
+		}]
+	END
+
+	# Uncomment for debugging the watchman query
+	# open (my $fh, ">", ".git/watchman-query.json");
+	# print $fh $query;
+	# close $fh;
+
+	print CHLD_IN $query;
+	close CHLD_IN;
+	my $response = do {local $/; <CHLD_OUT>};
+
+	# Uncomment for debugging the watch response
+	# open ($fh, ">", ".git/watchman-response.json");
+	# print $fh $response;
+	# close $fh;
+
+	die "Watchman: command returned no output.\n" .
+	"Falling back to scanning...\n" if $response eq "";
+	die "Watchman: command returned invalid output: $response\n" .
+	"Falling back to scanning...\n" unless $response =~ /^\{/;
+
+	return $json_pkg->new->utf8->decode($response);
+}
+
+sub is_work_tree_watched {
+	my ($output) = @_;
+	my $error = $output->{error};
+	if ($retry > 0 and $error and $error =~ m/unable to resolve root .* directory (.*) is not watched/) {
+		$retry--;
+		my $response = qx/watchman watch "$git_work_tree"/;
+		die "Failed to make watchman watch '$git_work_tree'.\n" .
+		    "Falling back to scanning...\n" if $? != 0;
+		$output = $json_pkg->new->utf8->decode($response);
+		$error = $output->{error};
+		die "Watchman: $error.\n" .
+		"Falling back to scanning...\n" if $error;
+
+		# Uncomment for debugging watchman output
+		# open (my $fh, ">", ".git/watchman-output.out");
+		# close $fh;
+
+		# Watchman will always return all files on the first query so
+		# return the fast "everything is dirty" flag to git and do the
+		# Watchman query just to get it over with now so we won't pay
+		# the cost in git to look up each individual file.
+		my $o = watchman_clock();
+		$error = $output->{error};
+
+		die "Watchman: $error.\n" .
+		"Falling back to scanning...\n" if $error;
+
+		output_result($o->{clock}, ("/"));
+		$last_update_token = $o->{clock};
+
+		eval { launch_watchman() };
+		return 0;
+	}
+
+	die "Watchman: $error.\n" .
+	"Falling back to scanning...\n" if $error;
+
+	return 1;
+}
+
+sub get_working_dir {
+	my $working_dir;
+	if ($^O =~ 'msys' || $^O =~ 'cygwin') {
+		$working_dir = Win32::GetCwd();
+		$working_dir =~ tr/\\/\//;
+	} else {
+		require Cwd;
+		$working_dir = Cwd::cwd();
+	}
+
+	return $working_dir;
+}
+
+--- END OF FILE ---
+
+
+--- FILE: ./.git/hooks/pre-receive.sample ---
+#!/bin/sh
+#
+# An example hook script to make use of push options.
+# The example simply echoes all push options that start with 'echoback='
+# and rejects all pushes when the "reject" push option is used.
+#
+# To enable this hook, rename this file to "pre-receive".
+
+if test -n "$GIT_PUSH_OPTION_COUNT"
+then
+	i=0
+	while test "$i" -lt "$GIT_PUSH_OPTION_COUNT"
+	do
+		eval "value=\$GIT_PUSH_OPTION_$i"
+		case "$value" in
+		echoback=*)
+			echo "echo from the pre-receive-hook: ${value#*=}" >&2
+			;;
+		reject)
+			exit 1
+		esac
+		i=$((i + 1))
+	done
+fi
+
+--- END OF FILE ---
+
+
+--- FILE: ./.git/hooks/prepare-commit-msg.sample ---
+#!/bin/sh
+#
+# An example hook script to prepare the commit log message.
+# Called by "git commit" with the name of the file that has the
+# commit message, followed by the description of the commit
+# message's source.  The hook's purpose is to edit the commit
+# message file.  If the hook fails with a non-zero status,
+# the commit is aborted.
+#
+# To enable this hook, rename this file to "prepare-commit-msg".
+
+# This hook includes three examples. The first one removes the
+# "# Please enter the commit message..." help message.
+#
+# The second includes the output of "git diff --name-status -r"
+# into the message, just before the "git status" output.  It is
+# commented because it doesn't cope with --amend or with squashed
+# commits.
+#
+# The third example adds a Signed-off-by line to the message, that can
+# still be edited.  This is rarely a good idea.
+
+COMMIT_MSG_FILE=$1
+COMMIT_SOURCE=$2
+SHA1=$3
+
+/usr/bin/perl -i.bak -ne 'print unless(m/^. Please enter the commit message/..m/^#$/)' "$COMMIT_MSG_FILE"
+
+# case "$COMMIT_SOURCE,$SHA1" in
+#  ,|template,)
+#    /usr/bin/perl -i.bak -pe '
+#       print "\n" . `git diff --cached --name-status -r`
+# 	 if /^#/ && $first++ == 0' "$COMMIT_MSG_FILE" ;;
+#  *) ;;
+# esac
+
+# SOB=$(git var GIT_COMMITTER_IDENT | sed -n 's/^\(.*>\).*$/Signed-off-by: \1/p')
+# git interpret-trailers --in-place --trailer "$SOB" "$COMMIT_MSG_FILE"
+# if test -z "$COMMIT_SOURCE"
+# then
+#   /usr/bin/perl -i.bak -pe 'print "\n" if !$first_line++' "$COMMIT_MSG_FILE"
+# fi
+
+--- END OF FILE ---
+
+
+--- FILE: ./.git/hooks/post-update.sample ---
+#!/bin/sh
+#
+# An example hook script to prepare a packed repository for use over
+# dumb transports.
+#
+# To enable this hook, rename this file to "post-update".
+
+exec git update-server-info
+
+--- END OF FILE ---
+
+
+--- FILE: ./.git/hooks/pre-merge-commit.sample ---
+#!/bin/sh
+#
+# An example hook script to verify what is about to be committed.
+# Called by "git merge" with no arguments.  The hook should
+# exit with non-zero status after issuing an appropriate message to
+# stderr if it wants to stop the merge commit.
+#
+# To enable this hook, rename this file to "pre-merge-commit".
+
+. git-sh-setup
+test -x "$GIT_DIR/hooks/pre-commit" &&
+        exec "$GIT_DIR/hooks/pre-commit"
+:
+
+--- END OF FILE ---
+
+
+--- FILE: ./.git/hooks/pre-applypatch.sample ---
+#!/bin/sh
+#
+# An example hook script to verify what is about to be committed
+# by applypatch from an e-mail message.
+#
+# The hook should exit with non-zero status after issuing an
+# appropriate message if it wants to stop the commit.
+#
+# To enable this hook, rename this file to "pre-applypatch".
+
+. git-sh-setup
+precommit="$(git rev-parse --git-path hooks/pre-commit)"
+test -x "$precommit" && exec "$precommit" ${1+"$@"}
+:
+
+--- END OF FILE ---
+
+
+--- FILE: ./.git/hooks/pre-push.sample ---
+#!/bin/sh
+
+# An example hook script to verify what is about to be pushed.  Called by "git
+# push" after it has checked the remote status, but before anything has been
+# pushed.  If this script exits with a non-zero status nothing will be pushed.
+#
+# This hook is called with the following parameters:
+#
+# $1 -- Name of the remote to which the push is being done
+# $2 -- URL to which the push is being done
+#
+# If pushing without using a named remote those arguments will be equal.
+#
+# Information about the commits which are being pushed is supplied as lines to
+# the standard input in the form:
+#
+#   <local ref> <local oid> <remote ref> <remote oid>
+#
+# This sample shows how to prevent push of commits where the log message starts
+# with "WIP" (work in progress).
+
+remote="$1"
+url="$2"
+
+zero=$(git hash-object --stdin </dev/null | tr '[0-9a-f]' '0')
+
+while read local_ref local_oid remote_ref remote_oid
+do
+	if test "$local_oid" = "$zero"
+	then
+		# Handle delete
+		:
+	else
+		if test "$remote_oid" = "$zero"
+		then
+			# New branch, examine all commits
+			range="$local_oid"
+		else
+			# Update to existing branch, examine new commits
+			range="$remote_oid..$local_oid"
+		fi
+
+		# Check for WIP commit
+		commit=$(git rev-list -n 1 --grep '^WIP' "$range")
+		if test -n "$commit"
+		then
+			echo >&2 "Found WIP commit in $local_ref, not pushing"
+			exit 1
+		fi
+	fi
+done
+
+exit 0
+
+--- END OF FILE ---
+
+
+--- FILE: ./.git/hooks/update.sample ---
+#!/bin/sh
+#
+# An example hook script to block unannotated tags from entering.
+# Called by "git receive-pack" with arguments: refname sha1-old sha1-new
+#
+# To enable this hook, rename this file to "update".
+#
+# Config
+# ------
+# hooks.allowunannotated
+#   This boolean sets whether unannotated tags will be allowed into the
+#   repository.  By default they won't be.
+# hooks.allowdeletetag
+#   This boolean sets whether deleting tags will be allowed in the
+#   repository.  By default they won't be.
+# hooks.allowmodifytag
+#   This boolean sets whether a tag may be modified after creation. By default
+#   it won't be.
+# hooks.allowdeletebranch
+#   This boolean sets whether deleting branches will be allowed in the
+#   repository.  By default they won't be.
+# hooks.denycreatebranch
+#   This boolean sets whether remotely creating branches will be denied
+#   in the repository.  By default this is allowed.
+#
+
+# --- Command line
+refname="$1"
+oldrev="$2"
+newrev="$3"
+
+# --- Safety check
+if [ -z "$GIT_DIR" ]; then
+	echo "Don't run this script from the command line." >&2
+	echo " (if you want, you could supply GIT_DIR then run" >&2
+	echo "  $0 <ref> <oldrev> <newrev>)" >&2
+	exit 1
+fi
+
+if [ -z "$refname" -o -z "$oldrev" -o -z "$newrev" ]; then
+	echo "usage: $0 <ref> <oldrev> <newrev>" >&2
+	exit 1
+fi
+
+# --- Config
+allowunannotated=$(git config --type=bool hooks.allowunannotated)
+allowdeletebranch=$(git config --type=bool hooks.allowdeletebranch)
+denycreatebranch=$(git config --type=bool hooks.denycreatebranch)
+allowdeletetag=$(git config --type=bool hooks.allowdeletetag)
+allowmodifytag=$(git config --type=bool hooks.allowmodifytag)
+
+# check for no description
+projectdesc=$(sed -e '1q' "$GIT_DIR/description")
+case "$projectdesc" in
+"Unnamed repository"* | "")
+	echo "*** Project description file hasn't been set" >&2
+	exit 1
+	;;
+esac
+
+# --- Check types
+# if $newrev is 0000...0000, it's a commit to delete a ref.
+zero=$(git hash-object --stdin </dev/null | tr '[0-9a-f]' '0')
+if [ "$newrev" = "$zero" ]; then
+	newrev_type=delete
+else
+	newrev_type=$(git cat-file -t $newrev)
+fi
+
+case "$refname","$newrev_type" in
+	refs/tags/*,commit)
+		# un-annotated tag
+		short_refname=${refname##refs/tags/}
+		if [ "$allowunannotated" != "true" ]; then
+			echo "*** The un-annotated tag, $short_refname, is not allowed in this repository" >&2
+			echo "*** Use 'git tag [ -a | -s ]' for tags you want to propagate." >&2
+			exit 1
+		fi
+		;;
+	refs/tags/*,delete)
+		# delete tag
+		if [ "$allowdeletetag" != "true" ]; then
+			echo "*** Deleting a tag is not allowed in this repository" >&2
+			exit 1
+		fi
+		;;
+	refs/tags/*,tag)
+		# annotated tag
+		if [ "$allowmodifytag" != "true" ] && git rev-parse $refname > /dev/null 2>&1
+		then
+			echo "*** Tag '$refname' already exists." >&2
+			echo "*** Modifying a tag is not allowed in this repository." >&2
+			exit 1
+		fi
+		;;
+	refs/heads/*,commit)
+		# branch
+		if [ "$oldrev" = "$zero" -a "$denycreatebranch" = "true" ]; then
+			echo "*** Creating a branch is not allowed in this repository" >&2
+			exit 1
+		fi
+		;;
+	refs/heads/*,delete)
+		# delete branch
+		if [ "$allowdeletebranch" != "true" ]; then
+			echo "*** Deleting a branch is not allowed in this repository" >&2
+			exit 1
+		fi
+		;;
+	refs/remotes/*,commit)
+		# tracking branch
+		;;
+	refs/remotes/*,delete)
+		# delete tracking branch
+		if [ "$allowdeletebranch" != "true" ]; then
+			echo "*** Deleting a tracking branch is not allowed in this repository" >&2
+			exit 1
+		fi
+		;;
+	*)
+		# Anything else (is there anything else?)
+		echo "*** Update hook: unknown type of update to ref $refname of type $newrev_type" >&2
+		exit 1
+		;;
+esac
+
+# --- Finished
+exit 0
+
+--- END OF FILE ---
+
+
+--- FILE: ./.git/hooks/push-to-checkout.sample ---
+#!/bin/sh
+
+# An example hook script to update a checked-out tree on a git push.
+#
+# This hook is invoked by git-receive-pack(1) when it reacts to git
+# push and updates reference(s) in its repository, and when the push
+# tries to update the branch that is currently checked out and the
+# receive.denyCurrentBranch configuration variable is set to
+# updateInstead.
+#
+# By default, such a push is refused if the working tree and the index
+# of the remote repository has any difference from the currently
+# checked out commit; when both the working tree and the index match
+# the current commit, they are updated to match the newly pushed tip
+# of the branch. This hook is to be used to override the default
+# behaviour; however the code below reimplements the default behaviour
+# as a starting point for convenient modification.
+#
+# The hook receives the commit with which the tip of the current
+# branch is going to be updated:
+commit=$1
+
+# It can exit with a non-zero status to refuse the push (when it does
+# so, it must not modify the index or the working tree).
+die () {
+	echo >&2 "$*"
+	exit 1
+}
+
+# Or it can make any necessary changes to the working tree and to the
+# index to bring them to the desired state when the tip of the current
+# branch is updated to the new commit, and exit with a zero status.
+#
+# For example, the hook can simply run git read-tree -u -m HEAD "$1"
+# in order to emulate git fetch that is run in the reverse direction
+# with git push, as the two-tree form of git read-tree -u -m is
+# essentially the same as git switch or git checkout that switches
+# branches while keeping the local changes in the working tree that do
+# not interfere with the difference between the branches.
+
+# The below is a more-or-less exact translation to shell of the C code
+# for the default behaviour for git's push-to-checkout hook defined in
+# the push_to_deploy() function in builtin/receive-pack.c.
+#
+# Note that the hook will be executed from the repository directory,
+# not from the working tree, so if you want to perform operations on
+# the working tree, you will have to adapt your code accordingly, e.g.
+# by adding "cd .." or using relative paths.
+
+if ! git update-index -q --ignore-submodules --refresh
+then
+	die "Up-to-date check failed"
+fi
+
+if ! git diff-files --quiet --ignore-submodules --
+then
+	die "Working directory has unstaged changes"
+fi
+
+# This is a rough translation of:
+#
+#   head_has_history() ? "HEAD" : EMPTY_TREE_SHA1_HEX
+if git cat-file -e HEAD 2>/dev/null
+then
+	head=HEAD
+else
+	head=$(git hash-object -t tree --stdin </dev/null)
+fi
+
+if ! git diff-index --quiet --cached --ignore-submodules $head --
+then
+	die "Working directory has staged changes"
+fi
+
+if ! git read-tree -u -m "$commit"
+then
+	die "Could not update working tree to new HEAD"
+fi
+
+--- END OF FILE ---
+
+
+📁 Directory: .git/refs
+--------------------------------------------------------------------------------
+
+📁 Directory: .git/refs/heads
+--------------------------------------------------------------------------------
+
+--- FILE: ./.git/refs/heads/main ---
+6e36544ab27256c22fd485bb457216259dbb9380
+
+--- END OF FILE ---
+
+
+📁 Directory: .git/refs/tags
+--------------------------------------------------------------------------------
+
+📁 Directory: .git/refs/remotes
+--------------------------------------------------------------------------------
+
+📁 Directory: .git/refs/remotes/origin
+--------------------------------------------------------------------------------
+
+--- FILE: ./.git/refs/remotes/origin/main ---
+6e36544ab27256c22fd485bb457216259dbb9380
+
+--- END OF FILE ---
+
+
+📁 Directory: helper
+--------------------------------------------------------------------------------
+
+--- FILE: ./helper/flattener.py ---
+import os
+
+def flatten_directory(source_dir, output_file="flattened_output.txt", include_exts=None, exclude_exts=None, max_file_size=500_000):
+    """
+    Flattens a directory by writing all file contents and paths into a single text file.
+
+    Args:
+        source_dir (str): Path to the directory to flatten.
+        output_file (str): Output text file path.
+        include_exts (list[str], optional): File extensions to include (e.g., ['.py', '.js']).
+        exclude_exts (list[str], optional): File extensions to exclude.
+        max_file_size (int): Skip files larger than this (in bytes).
+    """
+    with open(output_file, "w", encoding="utf-8") as out:
+        out.write(f"Flattened view of: {os.path.abspath(source_dir)}\n")
+        out.write("=" * 80 + "\n\n")
+
+        for root, dirs, files in os.walk(source_dir):
+            rel_path = os.path.relpath(root, source_dir)
+            out.write(f"\n📁 Directory: {rel_path}\n")
+            out.write("-" * 80 + "\n")
+
+            for file in files:
+                file_path = os.path.join(root, file)
+                ext = os.path.splitext(file)[1].lower()
+
+                # Extension filtering
+                if include_exts and ext not in include_exts:
+                    continue
+                if exclude_exts and ext in exclude_exts:
+                    continue
+
+                # Skip large files
+                if os.path.getsize(file_path) > max_file_size:
+                    out.write(f"[Skipped: {file} — too large]\n")
+                    continue
+
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    out.write(f"\n--- FILE: {file_path} ---\n")
+                    out.write(content)
+                    out.write("\n--- END OF FILE ---\n\n")
+                except Exception as e:
+                    out.write(f"[Error reading {file_path}: {e}]\n")
+
+    print(f"\n✅ Flattened directory written to: {output_file}")
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Flatten a code directory into one text file.")
+    parser.add_argument("directory", help="Path to directory to flatten")
+    parser.add_argument("-o", "--output", default="flattened_output.txt", help="Output text file name")
+    parser.add_argument("--include", nargs="*", help="File extensions to include (e.g., .py .js .html)")
+    parser.add_argument("--exclude", nargs="*", help="File extensions to exclude")
+    args = parser.parse_args()
+
+    flatten_directory(
+        source_dir=args.directory,
+        output_file=args.output,
+        include_exts=args.include,
+        exclude_exts=args.exclude
+    )
+
+--- END OF FILE ---
+
