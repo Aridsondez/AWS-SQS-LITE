@@ -2,134 +2,327 @@
 
 *A distributed Queue Service in GO (AWS SQS inspired)*
 
-## Overview 
-SQS-lite is a simplified version of AWS SQS built for learning distributed systems, concurancy, and containerized development
+## Overview
+
+SQS-lite is a simplified version of AWS SQS built for learning distributed systems, concurrency, and containerized development.
 
 The system provides:
 
-At-least-once delivery (workers may see duplicates → must be idempotent).
+- **At-least-once delivery** - Workers may see duplicates (must be idempotent)
+- **Visibility timeouts & leases** - Messages "locked" while in flight
+- **Automatic retries** - Failed messages automatically requeue
+- **Dead Letter Queues (DLQs)** - Messages that fail too often are quarantined
+- **REST API** - For producers & workers
+- **Prometheus metrics** - Production-ready monitoring
 
-Visibility timeouts & leases (messages “locked” while in flight).
+This is not meant to replace SQS — it's a learning project to deeply understand the design trade-offs in message queuing systems.
 
-Retries with exponential backoff + jitter.
+---
 
-Dead Letter Queues (DLQs) (messages that fail too often are quarantined).
+## ✨ Features Implemented
 
-API/CLI for producers & workers.
+### Core Functionality
+- ✅ **Enqueue** - Add messages with optional delay
+- ✅ **Receive/Claim** - Atomically lease messages using PostgreSQL `FOR UPDATE SKIP LOCKED`
+- ✅ **Acknowledge** - Delete successfully processed messages
+- ✅ **Background Sweeper** - Automatically requeue expired messages or route to DLQ
+- ✅ **Dead Letter Queue** - Failed messages automatically route to DLQ after max retries
 
-Basic monitoring/metrics with Prometheus.
+### Observability
+- ✅ **Prometheus Metrics** - Track enqueued, received, acked, requeued, and DLQ'd messages
+- ✅ **Sweeper Metrics** - Monitor sweeper duration and errors
+- ✅ **Health Check** - `/healthz` endpoint
 
-This is not meant to replace SQS — it’s a learning project to deeply understand the design trade-offs in message queuing systems.
+### Testing & Demo
+- ✅ **Integration Tests** - Comprehensive test suite
+- ✅ **Interactive CLI Demo** - Visual demonstration of all features
+- ✅ **Makefile** - Easy development workflow
 
-## Why This Project?
+---
 
-Building SQS-Lite gives hands-on practice with concepts that are common in distributed infrastructure:
+## 🚀 Quick Start
 
-Go concurrency: goroutines, channels, contexts for producer/consumer patterns.
+### Prerequisites
+- Docker & Docker Compose
+- Go 1.23+
 
-Database-backed queues: using Postgres with FOR UPDATE SKIP LOCKED for safe multi-consumer message claims.
+### 1. Start Database
+```bash
+make db-up
+```
 
-Delivery guarantees: understanding at-least-once vs exactly-once semantics.
+### 2. Run Server (in one terminal)
+```bash
+make run
+```
 
-Backoff strategies: exponential backoff with jitter to avoid thundering herds.
+### 3. Run Interactive Demo (in another terminal)
+```bash
+make demo
+```
 
-Observability: Prometheus counters/histograms, structured logs.
+You'll see a beautiful colored output demonstrating:
+1. Basic message flow (enqueue → receive → ack)
+2. Sweeper requeuing expired messages
+3. DLQ routing after max retries
+4. Live Prometheus metrics
 
-Containerization: Docker/Docker Compose to run API, workers, and DB together.
+---
 
-Recruiters love this kind of project because it shows you can design, implement, and explain infra-level software — the same skills used at companies like AWS, HashiCorp, and Cloudflare.
+## 📖 API Reference
 
-## Tech Stack
+### Health Check
+```bash
+GET /healthz
+```
 
-Language: Go (fast, simple concurrency, industry standard for infra).
+### Enqueue Message
+```bash
+POST /v1/queues/{queue}/messages
+Content-Type: application/json
 
-Storage: PostgreSQL (durability + transactional locks).
+{
+  "body": {"task": "process-order"},
+  "delay": 5000,          # Optional: milliseconds
+  "max_retries": 3,       # Optional: defaults to 5
+  "dlq": "failed-queue",  # Optional: DLQ name
+  "trace_id": "xyz123"    # Optional: for tracing
+}
 
-API: REST (JSON). gRPC may be added later.
+Response: {"id": 123}
+```
 
-Observability: Prometheus for metrics, structured logging with zerolog.
+### Receive Messages
+```bash
+POST /v1/queues/{queue}:receive
+Content-Type: application/json
 
-Containers: Docker + docker-compose (API, DB, Prometheus).
+{
+  "max": 10,              # Max messages to receive (1-32)
+  "visibility_ms": 30000  # Visibility timeout in milliseconds
+}
 
-CLI: Cobra in Go, wrapping API calls for enqueue/receive/ack.
+Response: [
+  {
+    "id": 123,
+    "body": {"task": "process-order"},
+    "receipt": "123",
+    "lease_until": "2026-01-07T...",
+    "delivery_count": 1,
+    "max_retries": 3,
+    "dlq": "failed-queue"
+  }
+]
+```
 
-## Architecture
+### Acknowledge Message
+```bash
+POST /v1/messages/{id}:ack
+Content-Type: application/json
 
-Core components:
+{}
 
-API Server: Enqueue, receive, ack, change-visibility, stats.
+Response: {"ok": true}
+```
 
-Queue Manager: Implements leases, retries, DLQs.
+### Prometheus Metrics
+```bash
+GET /metrics
+```
 
-Storage Layer: Postgres transactions for concurrency control.
+---
 
-Sweeper: Background task to detect expired leases and requeue or DLQ messages.
+## 📊 Metrics
 
-Worker SDK & CLI: Client libraries for producers/consumers.
+The following Prometheus metrics are exposed at `/metrics`:
 
-Metrics: Prometheus endpoint for observability.
+| Metric | Type | Description |
+|--------|------|-------------|
+| `sqs_messages_enqueued_total{queue}` | Counter | Total messages enqueued per queue |
+| `sqs_messages_received_total{queue}` | Counter | Total messages received per queue |
+| `sqs_messages_acked_total` | Counter | Total messages acknowledged |
+| `sqs_messages_requeued_total` | Counter | Total messages requeued by sweeper |
+| `sqs_messages_dlq_total` | Counter | Total messages sent to DLQ |
+| `sqs_sweeper_duration_seconds` | Histogram | Sweeper execution duration |
+| `sqs_sweeper_errors_total` | Counter | Total sweeper errors |
 
-Message lifecycle:
+---
 
-Enqueue → message stored in Postgres with not_before timestamp.
+## 🛠️ Development
 
-Receive → worker claims messages via FOR UPDATE SKIP LOCKED, sets lease_until.
+### Available Commands
 
-Ack → worker signals completion → message deleted.
+```bash
+make help              # Show all available commands
+make db-up             # Start PostgreSQL database
+make db-down           # Stop PostgreSQL database
+make db-reset          # Reset database (down + up)
+make run               # Run the API server
+make demo              # Run interactive demo
+make test              # Run all tests
+make test-integration  # Run integration tests only
+make build             # Build the binary
+make clean             # Clean up containers and volumes
+```
 
-Visibility timeout expires → message becomes available again.
+### Environment Variables
 
-Retries exceed limit → message moved to Dead Letter Queue.
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | (required) | PostgreSQL connection string |
+| `PORT` | 8080 | HTTP server port |
+| `SWEEPER_INTERVAL` | 60 | Sweeper run interval (seconds) |
+| `VISIBILITY_TIMEOUT` | 30 | Default visibility timeout (seconds) |
+| `RECEIVE_MAX` | 10 | Default max messages per receive |
+| `LOG_LEVEL` | info | Log level |
 
-## Projected File Structure
-sqs-lite/
+---
+
+## 🏗️ Architecture
+
+### Components
+
+1. **API Server** - HTTP REST API for message operations
+2. **PostgreSQL Store** - Durable message storage with ACID guarantees
+3. **Background Sweeper** - Goroutine that processes expired leases
+4. **Prometheus Exporter** - Metrics endpoint for monitoring
+
+### Message Lifecycle
+
+```
+1. ENQUEUE
+   ↓
+   Message stored in PostgreSQL
+   (not_before = now() + delay)
+   ↓
+2. RECEIVE
+   ↓
+   Worker claims message using FOR UPDATE SKIP LOCKED
+   (lease_until = now() + visibility_timeout)
+   (delivery_count++)
+   ↓
+3a. ACK (Success)          3b. Timeout (Failure)
+    ↓                          ↓
+    Message deleted            Sweeper detects expired lease
+                              ↓
+                          4a. Requeue        4b. DLQ
+                          (if < max_retries) (if >= max_retries)
+                              ↓                  ↓
+                          Back to step 2      Moved to DLQ queue
+```
+
+### Database Schema
+
+```sql
+CREATE TABLE messages (
+  id               BIGSERIAL PRIMARY KEY,
+  queue            TEXT NOT NULL,
+  body             JSONB NOT NULL,
+  enqueued_at      TIMESTAMPTZ DEFAULT now(),
+  not_before       TIMESTAMPTZ DEFAULT now(),  -- Delay support
+  lease_until      TIMESTAMPTZ,                 -- NULL = available
+  delivery_count   INT DEFAULT 0,
+  max_retries      INT DEFAULT 5,
+  dlq              TEXT,                        -- DLQ queue name
+  trace_id         TEXT
+);
+
+-- Indexes for performance
+CREATE INDEX idx_messages_available ON messages (queue, not_before, id)
+  WHERE lease_until IS NULL;
+
+CREATE INDEX idx_messages_inflight ON messages (queue, lease_until)
+  WHERE lease_until IS NOT NULL;
+```
+
+---
+
+## 🧪 Testing
+
+### Run All Tests
+```bash
+make test
+```
+
+### Run Integration Tests
+```bash
+make test-integration
+```
+
+### Integration Test Coverage
+- Basic message flow (enqueue → receive → ack)
+- Sweeper requeues expired messages
+- DLQ routing after max retries
+
+---
+
+## 📁 Project Structure
+
+```
+AWS-SQS-LITE/
 ├── cmd/
-│   ├── api/        # API server entrypoint
-│   ├── worker/     # Example worker process
-│   └── cli/        # CLI using Cobra
+│   ├── api/              # API server entrypoint
+│   └── demo/             # Interactive demo CLI
 ├── internal/
-│   ├── api/        # HTTP handlers & routes
-│   ├── config/     # Env config loader
-│   ├── metrics/    # Prometheus metrics registration
-│   └── queue/      # Core queue logic
-│       ├── store/  # Postgres-backed store
-│       ├── models.go
-│       └── service.go
-├── migrations/     # SQL migrations for Postgres schema
-├── deploy/
-│   └── prometheus/ # Prometheus config
-├── scripts/        # Dev helpers, notes
-├── Dockerfile
-├── docker-compose.yml
-├── README.md
-└── go.mod
+│   ├── api/              # HTTP handlers & routing
+│   ├── config/           # Configuration management
+│   ├── metrics/          # Prometheus metrics
+│   └── queue/
+│       ├── models.go     # Data structures
+│       ├── services.go   # Business logic
+│       ├── store/        # Storage interface
+│       │   └── postgres/ # PostgreSQL implementation
+│       └── sweeper/      # Background sweeper
+├── migrations/           # Database migrations
+├── tests/                # Integration tests
+├── docker-compose.yml    # Docker services
+├── Makefile             # Development commands
+└── README.md
+```
 
-## Development Plan (6 Weeks)
+---
 
-Week 1 → Repo setup, schema design, in-memory queue prototype.
+## 🎯 Learning Outcomes
 
-Week 2 → Postgres integration, basic enqueue/receive/ack.
+By building this project, you'll gain hands-on experience with:
 
-Week 3 → Change-visibility, sweeper, retries.
+- **Go Concurrency** - Goroutines, channels, contexts for producer/consumer patterns
+- **Database Transactions** - Using PostgreSQL `FOR UPDATE SKIP LOCKED` for safe concurrency
+- **Distributed Systems** - Message queues, delivery guarantees, retry strategies
+- **Observability** - Prometheus metrics, structured logging
+- **API Design** - RESTful APIs for infrastructure tools
+- **Testing** - Integration tests for distributed systems
+- **DevOps** - Docker, Docker Compose, Makefiles
 
-Week 4 → Dead Letter Queues + Prometheus metrics.
+---
 
-Week 5 → CLI tooling, worker SDK, docs.
+## 🔮 Future Enhancements
 
-Week 6 → Load testing, polish, LinkedIn demo post.
+- [ ] **Change Visibility** - Extend lease duration for long-running tasks
+- [ ] **Batch Operations** - Send/delete multiple messages at once
+- [ ] **Long Polling** - Wait for messages instead of immediate empty response
+- [ ] **Queue Stats** - GET /v1/queues/{queue}/stats endpoint
+- [ ] **FIFO Queues** - Message ordering guarantees
+- [ ] **Exponential Backoff** - Configurable backoff strategies
+- [ ] **Structured Logging** - Replace basic log with zerolog
+- [ ] **gRPC API** - High-performance alternative to REST
+- [ ] **Worker SDK** - Client library for workers
+- [ ] **Load Testing** - Performance benchmarks
 
-## Learning Outcomes
+---
 
-By the end of this project you’ll be comfortable with:
+## 📝 License
 
-Writing concurrent Go code with goroutines/channels.
+This project is for educational purposes. Feel free to use it for learning!
 
-Designing APIs for infra tools.
+---
 
-Using Postgres for concurrency control (FOR UPDATE SKIP LOCKED).
+## 🙏 Acknowledgments
 
-Implementing exponential backoff & retry policies.
+Inspired by AWS SQS and built to learn distributed systems engineering.
 
-Deploying multi-service systems with Docker Compose.
-
-Explaining distributed system trade-offs to recruiters.
+**Tech Stack:**
+- Go - Fast, simple concurrency
+- PostgreSQL - ACID compliance & transactional locks
+- Prometheus - Production-grade metrics
+- Docker - Containerization
