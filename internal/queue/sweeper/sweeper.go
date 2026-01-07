@@ -5,8 +5,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/aridsondez/AWS-SQS-LITE/internal/metrics"
 	"github.com/aridsondez/AWS-SQS-LITE/internal/queue/store"
-	"golang.org/x/telemetry/counter"
 )
 
 type Sweeper struct {
@@ -43,11 +43,16 @@ func (s *Sweeper) Start(ctx context.Context) {
 			return 
 		
 		case <-ticker.C:
+			start := time.Now()
 			count, err := s.store.Sweeper(ctx)
+			duration := time.Since(start).Seconds()
+			metrics.SweeperDuration.Observe(duration)
+
 			if err != nil {
 				log.Printf("Sweeper error: %v", err)
+				metrics.SweeperErrors.Inc()
 			} else if count > 0 {
-				log.Printf("Sweeper processed %d messages", count)
+				log.Printf("Sweeper processed %d messages in %.2fs", count, duration)
 			}
 			// If count == 0, silently continue (no messages to process)
 		}

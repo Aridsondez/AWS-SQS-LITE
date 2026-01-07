@@ -10,7 +10,9 @@ import(
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/aridsondez/AWS-SQS-LITE/internal/metrics"
 	"github.com/aridsondez/AWS-SQS-LITE/internal/queue"
 	"github.com/aridsondez/AWS-SQS-LITE/internal/queue/store"
 )
@@ -39,7 +41,7 @@ func NewServer(addr string, s store.Store) *http.Server {
 		_,_ = w.Write([]byte("ok"))
 	})
 
-	//r.Handle("/metrics", promhttp.Handler())
+	r.Handle("/metrics", promhttp.Handler())
 
 	r.Route("/v1", func(r chi.Router) {
 		// enqueue: POST /v1/queues/{queue}/messages
@@ -131,6 +133,7 @@ func (s *Server) handleEnqueue(w http.ResponseWriter, r *http.Request) {
 		httpError(w, http.StatusInternalServerError, "enqueue failed: %v", err)
 		return
 	}
+	metrics.MessagesEnqueued.WithLabelValues(qname).Inc()
 	writeJSON(w, http.StatusCreated, &enqueueResponse{ID: id})
 }
 
@@ -169,13 +172,14 @@ func (s *Server) handleReceive(w http.ResponseWriter, r *http.Request) {
 		resp = append(resp, receivedMessage{
 			ID:            m.ID,
 			Body:          json.RawMessage(m.Body),
-			Receipt:       strconv.FormatInt(m.ID, 10), 
+			Receipt:       strconv.FormatInt(m.ID, 10),
 			LeaseUntil:    m.LeaseUntil,
 			DeliveryCount: m.DeliveryCount,
 			MaxRetries:    m.MaxRetries,
 			DLQ:           m.DLQ,
 			TraceID:       m.TraceID,
 		})
+		metrics.MessagesReceived.WithLabelValues(qname).Inc()
 	}
 	writeJSON(w, http.StatusOK, resp)
 }
@@ -201,10 +205,11 @@ func (s *Server) handleAck(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !ok {
-		// id wasn’t found (already acked/expired & reclaimed); 404 is reasonable
+		// id wasn't found (already acked/expired & reclaimed); 404 is reasonable
 		httpError(w, http.StatusNotFound, "message not found")
 		return
 	}
+	metrics.MessagesAcked.Inc()
 	writeJSON(w, http.StatusOK, &ackResponse{OK: true})
 }
 

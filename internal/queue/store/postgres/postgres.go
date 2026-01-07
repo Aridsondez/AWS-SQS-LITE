@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/aridsondez/AWS-SQS-LITE/internal/metrics"
 	"github.com/aridsondez/AWS-SQS-LITE/internal/queue"
 	"github.com/aridsondez/AWS-SQS-LITE/internal/queue/store"
 )
@@ -156,17 +157,20 @@ func (p *PostgresStore) Ack(ctx context.Context, id int64) (bool, error) {
 }
 
 func (p *PostgresStore) Sweeper(ctx context.Context) (int, error) {
-	var totalProcessed int 
+	var totalProcessed int
 
-	
+
 	tag, err := p.pool.Exec(ctx, sqlSweeperRequeue)
 	if err != nil {
 		return 0, fmt.Errorf("Sweep requeued, %w", err)
 	}
 	requeuedCount := int(tag.RowsAffected())
 	totalProcessed += requeuedCount
+	if requeuedCount > 0 {
+		metrics.MessagesRequeued.Add(float64(requeuedCount))
+	}
 
-	// now handle dlq 
+	// now handle dlq
 
 	tag, err = p.pool.Exec(ctx, sqlSweeperDLQ)
 	if err != nil {
@@ -174,7 +178,10 @@ func (p *PostgresStore) Sweeper(ctx context.Context) (int, error) {
 	}
 	dlqCount := int(tag.RowsAffected())
 	totalProcessed += dlqCount
+	if dlqCount > 0 {
+		metrics.MessagesDLQd.Add(float64(dlqCount))
+	}
 
-	return totalProcessed, nil 
+	return totalProcessed, nil
 
 }
