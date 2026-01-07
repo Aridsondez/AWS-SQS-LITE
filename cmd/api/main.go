@@ -14,6 +14,7 @@ import (
 	"github.com/aridsondez/AWS-SQS-LITE/internal/api"
 	"github.com/aridsondez/AWS-SQS-LITE/internal/config"
 	pgstore "github.com/aridsondez/AWS-SQS-LITE/internal/queue/store/postgres"
+	"github.com/aridsondez/AWS-SQS-LITE/internal/queue/sweeper"
 )
 
 func main() {
@@ -39,6 +40,9 @@ func main() {
 	}
 
 	store := pgstore.New(pool)
+
+	swp := sweeper.New(store, cfg.SweeperInterval)
+	go swp.Start(ctx)
 
 	addr := fmt.Sprintf(":%d", cfg.Port)
 	httpSrv := api.NewServer(addr, store)

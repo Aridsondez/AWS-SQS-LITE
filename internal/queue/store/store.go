@@ -17,4 +17,6 @@ type Store interface {
 
 	// Ack deletes the message by ID; returns true if deleted.
 	Ack(ctx context.Context, id int64) (bool, error)
+
+	Sweeper(ctx context.Context) (int, error)
 }

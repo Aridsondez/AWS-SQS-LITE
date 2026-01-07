@@ -17,6 +17,7 @@ type Config struct {
 	SweepInterval       time.Duration
 	LogLevel            string
 	DBConnectionTimeout time.Duration
+	SweeperInterval     time.Duration
 }
 
 // helper: read env var as int seconds → convert to duration
@@ -54,6 +55,7 @@ func LoadConfig() (*Config, error) {
 		SweepInterval:       getEnvAsDuration("SWEEP_INTERVAL", 60*time.Second),
 		LogLevel:            getEnv("LOG_LEVEL", "info"),
 		DBConnectionTimeout: getEnvAsDuration("DB_CONNECTION_TIMEOUT", 5*time.Second),
+		SweeperInterval:     getEnvAsDuration("SWEEPER_INTERVAL", 1*time.Minute),
 	}
 
 	// Basic validation

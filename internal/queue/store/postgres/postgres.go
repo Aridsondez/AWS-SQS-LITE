@@ -58,6 +58,37 @@ updated AS (
 SELECT * FROM updated;`
 
 	sqlAck = `DELETE FROM messages WHERE id = $1;`
+
+ 	sqlSweeperRequeue = `WITH expired AS (
+		SELECT id
+		FROM messages
+		WHERE lease_until IS NOT NULL
+			AND lease_until < now()
+			AND (delivery_count < max_retries OR dlq IS NULL)
+		FOR UPDATE SKIP LOCKED
+		)
+		UPDATE messages
+		SET lease_until = NULL
+		WHERE id IN (SELECT id FROM expired)
+		`
+	sqlSweeperDLQ = `WITH expired_for_dlq AS (
+			SELECT id, dlq, body, enqueued_at, max_retries, trace_id
+			FROM messages
+			WHERE lease_until IS NOT NULL
+				AND lease_until < NOW()
+				AND delivery_count >= max_retries
+				AND dlq IS NOT NULL
+			FOR UPDATE SKIP LOCKED
+		),
+		inserted AS (
+			INSERT INTO messages (queue, body, enqueued_at, max_retries, trace_id, delivery_count)
+			SELECT dlq, body, enqueued_at, max_retries, trace_id,0 
+			FROM expired_for_dlq
+			RETURNING id
+)
+		DELETE FROM messages
+		WHERE id IN (SELECT id FROM expired_for_dlq)`
+
 )
 
 // Enqueue inserts a message with optional delay.
@@ -122,4 +153,28 @@ func (p *PostgresStore) Ack(ctx context.Context, id int64) (bool, error) {
 		return false, err
 	}
 	return ct.RowsAffected() > 0, nil
+}
+
+func (p *PostgresStore) Sweeper(ctx context.Context) (int, error) {
+	var totalProcessed int 
+
+	
+	tag, err := p.pool.Exec(ctx, sqlSweeperRequeue)
+	if err != nil {
+		return 0, fmt.Errorf("Sweep requeued, %w", err)
+	}
+	requeuedCount := int(tag.RowsAffected())
+	totalProcessed += requeuedCount
+
+	// now handle dlq 
+
+	tag, err = p.pool.Exec(ctx, sqlSweeperDLQ)
+	if err != nil {
+		return 0, fmt.Errorf("Sweep DLQ %w", err)
+	}
+	dlqCount := int(tag.RowsAffected())
+	totalProcessed += dlqCount
+
+	return totalProcessed, nil 
+
 }
